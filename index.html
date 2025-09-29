@@ -111,20 +111,135 @@
     #pickup .reserve-cta .btn.primary:hover{background:#1e40af;box-shadow:0 10px 24px rgba(30,64,175,.22);transform:translateY(-1px)}
     .toast{position:fixed;right:16px;bottom:16px;background:#111827;color:#fff;padding:10px 14px;border-radius:10px;opacity:0;transition:opacity .25s, transform .25s;transform:translateY(10px)}
     .toast.show{opacity:1;transform:none}
+
+    /* Dropdown menu */
+    .dropdown{position:relative}
+    .menu-btn{
+      display:inline-flex;align-items:center;gap:6px;
+      font-weight:700;font-size:14px;cursor:pointer;
+      padding:10px 14px;border-radius:10px;border:1px solid var(--border);
+      background:#f1f5f9;color:var(--text);box-shadow:var(--shadow)
+    }
+    .menu-btn:hover{transform:translateY(-1px);box-shadow:0 10px 32px rgba(20,30,60,.12)}
+    .menu{
+      position:absolute;right:0;top:100%;margin-top:8px;min-width:220px;
+      background:#fff;border:1px solid var(--border);border-radius:12px;
+      box-shadow:var(--shadow);padding:6px;display:none;z-index:60
+    }
+    .dropdown.open .menu{display:block}
+    .menu a{
+      display:block;padding:10px 12px;border-radius:8px;
+      color:var(--text);text-decoration:none;font-weight:600;font-size:14px
+    }
+    .menu a:hover{background:rgba(0,0,0,.05)}
+    /* 小螢幕可加大點擊區 */
+    @media(max-width:640px){ .menu-btn{padding:12px 16px} .menu{min-width:200px} }
+
+    /* --- Responsive Navbar --- */
+    /* 預設：桌機顯示連結、隱藏下拉 */
+    .nav-links{display:flex; gap:6px; align-items:center}
+    .dropdown{display:none}
+
+    /* 視窗 <= 900px：隱藏連結、顯示下拉 */
+    @media(max-width:900px){
+      .nav-links{display:none}
+      .dropdown{display:block}
+    }
+
+    /* 下拉樣式 */
+    .dropdown{position:relative}
+    .menu-btn{
+      display:inline-flex;align-items:center;gap:6px;
+      font-weight:700;font-size:14px;cursor:pointer;
+      padding:10px 14px;border-radius:10px;border:1px solid var(--border);
+      background:#f1f5f9;color:var(--text);box-shadow:var(--shadow)
+    }
+    .menu-btn:hover{transform:translateY(-1px);box-shadow:0 10px 32px rgba(20,30,60,.12)}
+    .menu{
+      position:absolute;right:0;top:100%;margin-top:8px;min-width:220px;
+      background:#fff;border:1px solid var(--border);border-radius:12px;
+      box-shadow:var(--shadow);padding:6px;display:none;z-index:60
+    }
+    .dropdown.open .menu{display:block}
+    .menu a{
+      display:block;padding:10px 12px;border-radius:8px;
+      color:var(--text);text-decoration:none;font-weight:600;font-size:14px
+    }
+    .menu a:hover{background:rgba(0,0,0,.05)}
+
+    /* === Mobile 溢出修補 === */
+
+    /* 讓 Grid 內的卡片允許縮小，避免被內容撐出外框 */
+    .grid-2 > * { min-width: 0; }
+    .form-card, .map-card { min-width: 0; }
+
+    /* 收住整個區塊的陰影/內容 */
+    #pickup .panel { overflow: hidden; }
+
+    /* SVG 地圖改為真正響應式（不再用固定高度撐寬） */
+    .campus svg {
+      width: 100%;
+      height: auto;
+      aspect-ratio: 600 / 300; /* 對應你的 viewBox 0 0 600 300 */
+    }
+
+    /* 超小螢幕時，給地圖更高的顯示比例，避免內容太扁 */
+    @media (max-width: 420px) {
+      .campus svg { aspect-ratio: 600 / 360; }
+    }
+
+    /* 小螢幕表單改為上下排列，避免 120px 標籤欄造成擠壓 */
+    @media (max-width: 520px) {
+      #pickup .panel { padding: 12px; }
+      .field { grid-template-columns: 1fr; }
+    }
+
+    /* 兩欄佈局在窄螢幕本來就會變單欄，但再保險一次，並縮小外距 */
+    @media (max-width: 900px) {
+      .grid-2 { grid-template-columns: 1fr; }
+    }
+
+
   </style>
 </head>
 <body>
   <header>
     <nav class="nav">
-      <div class="brand"><div class="pill">SafeCloud</div><div>智慧交通雲</div></div>
+      <div class="brand">
+        <div class="pill">SafeCloud</div><div>智慧交通雲</div>
+      </div>
       <div class="nav-spacer"></div>
-      <a href="#today">今日預約</a>
-      <a href="#pickup">放學接送預約</a>
-      <a href="#traffic">車流量</a>
-      <a href="#parking">停車資訊</a>
-      <a href="#bookings">我的預約</a>
+
+      <!-- 桌機版：直接顯示連結 -->
+      <div class="nav-links" id="navLinks">
+        <a href="#today">今日狀態</a>
+        <a href="#pickup">上放學接送預約</a>
+        <a href="#traffic">車流資訊</a>
+        <a href="#parking">停車資訊</a>
+        <a href="#bookings">我的預約</a>
+      </div>
+
+      <!-- 手機版：下拉式選單 -->
+      <div class="dropdown" id="mainDropdown" aria-label="主選單">
+        <button class="menu-btn" id="menuToggle"
+                aria-haspopup="true" aria-expanded="false" aria-controls="mainMenu">
+          功能選單
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" style="margin-left:6px">
+            <path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+        <div class="menu" id="mainMenu" role="menu">
+          <a role="menuitem" href="#today">今日狀態</a>
+          <a role="menuitem" href="#pickup">上放學接送預約</a>
+          <a role="menuitem" href="#traffic">車流資訊</a>
+          <a role="menuitem" href="#parking">停車資訊</a>
+          <a role="menuitem" href="#bookings">我的預約</a>
+        </div>
+      </div>
     </nav>
   </header>
+
+
 
   <section class="hero" id="top">
     <div class="hero-wrap">
@@ -161,7 +276,7 @@
   <!-- 放學接送預約 -->
   <section id="pickup">
     <div class="wrap">
-      <h2 class="h2">📍 放學接送預約</h2>
+      <h2 class="h2">📍 上放學接送預約</h2>
       <div class="panel grid-2">
         <div class="form-card">
           <div class="field"><label for="date">放學日期</label><input id="date" type="date" /></div>
@@ -184,6 +299,7 @@
               <option value="C">圓環 C</option>
               <option value="D">圓環 D</option>
               <option value="E">懷恩街</option>
+              <option value="F">長榮路二段</option>
             </select>
           </div>
           <div class="field"><label for="note">備註</label><input id="note" type="text" placeholder="例如：改走懷恩街、臨停5分鐘內離場等"/></div>
@@ -236,7 +352,7 @@
             <g class="marker" id="ring-D">
               <circle cx="170" cy="305" r="9" fill="#2ecc71" />
               <text x="170" y="295" font-size="12" text-anchor="middle" fill="#334155">D</text>
-              <title>接送點 </title>
+              <title>接送點 D</title>
             </g>
             <g class="marker" id="huai-en">
               <circle cx="250" cy="60" r="9" fill="#ffd54f" />
@@ -244,14 +360,15 @@
               <title>懷恩街 接送點</title>
             </g>
 
+            <g class="marker" id="evergreen">
+              <circle cx="560" cy="150" r="9" fill="#ffd54f" />
+              <text x="560" y="150" font-size="12" text-anchor="middle" fill="#334155">長榮路</text>
+              <title>長榮路二段 接送點</title>
+            </g>
+
             <!-- 動態高亮容器：按「未接送」時才會插入 -->
             <g id="dynMarker"></g>
 
-            <!-- 圖例 -->
-            <g font-size="12" fill="#334155">
-              <rect x="20" y="18" width="10" height="10" rx="2" fill="#2ecc71"/><text x="36" y="27">圓環接送點 A-D</text>
-              <rect x="20" y="48" width="10" height="10" rx="2" fill="#ffd54f"/><text x="36" y="57">懷恩街接送點</text>
-            </g>
           </svg>
           <div class="legend" style="margin-top:10px">
             <span><span class="dot yellow"></span>壅擠</span>
@@ -365,7 +482,8 @@
       {key:'B', label:'圓環 B', markerId:'ring-B'},
       {key:'C', label:'圓環 C', markerId:'ring-C'},
       {key:'D', label:'圓環 D', markerId:'ring-D'},
-      {key:'E', label:'懷恩街', markerId:'huai-en'}
+      {key:'E', label:'懷恩街', markerId:'huai-en'},
+      {key:'F', label:'長榮路二段', markerId:'evergreen'}
     ];
     // 安全版 $ / $$（el 為 null 也不會報錯）
     const $  = (sel, el) => (el ?? document).querySelector(sel);
@@ -434,6 +552,7 @@
           <div class="meta">狀態：<span class="pill ${statusPill}">${item.status}</span></div>
           <div class="btns">
             <button type="button" class="btn small warn" data-action="delete">取消</button>
+            <button type="button" class="btn small" data-action="edit" style="background:#e0f2fe;border:1px solid #bae6fd;color:#075985;">修改</button>
             <button type="button" class="btn small" data-action="remind" style="background:linear-gradient(135deg,#e6f0ff,#e8f9ef);border:1px solid transparent;color:var(--text);">提醒</button>
           </div>`;
         container.appendChild(card);
@@ -535,6 +654,39 @@
       const dateInput=$('#date'); if(dateInput && !dateInput.value) dateInput.value=todayYMD();
       render();
     })();
+
+
+    // --- 手機版下拉選單互動 ---
+    (function dropdownInit(){
+      const dropdown = document.getElementById('mainDropdown');
+      const btn = document.getElementById('menuToggle');
+      const menu = document.getElementById('mainMenu');
+
+      if(!dropdown || !btn || !menu) return;
+
+      function isMobile(){ return window.matchMedia('(max-width: 900px)').matches; }
+      function setOpen(open){
+        dropdown.classList.toggle('open', open);
+        btn.setAttribute('aria-expanded', String(open));
+      }
+      function toggle(){ setOpen(!dropdown.classList.contains('open')); }
+
+      btn.addEventListener('click', (e)=>{ if(!isMobile()) return; e.preventDefault(); toggle(); });
+
+      // 點選選單項目：錨點跳轉 + 收合
+      menu.addEventListener('click', (e)=>{
+        const link = e.target.closest('a[href^="#"]');
+        if(!link) return;
+        setOpen(false);
+      });
+
+      // 點擊外部與 Esc 關閉；滾動時也收合
+      document.addEventListener('click', (e)=>{ if(isMobile() && !dropdown.contains(e.target)) setOpen(false); });
+      document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') setOpen(false); });
+      window.addEventListener('scroll', ()=> setOpen(false), {passive:true});
+    })();
+
+
   </script>
 </body>
 </html>
