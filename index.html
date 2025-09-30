@@ -453,7 +453,7 @@
           <div class="lot"><div class="lot-inner"><div class="lot-face lot-front"><div class="lamp yellow"></div><div class="lot-title">東門城圓環·路側平行格</div><div class="chip">剩餘 6</div></div><div class="lot-face lot-back"><div style="grid-column:1/-1;font-size:13px;color:var(--muted);">標線已調整為平行格 · 尖峰不建議臨停</div></div></div></div>
           <div class="lot"><div class="lot-inner"><div class="lot-face lot-front"><div class="lamp red"></div><div class="lot-title">勝利路·校門前路邊格</div><div class="chip">已滿</div></div><div class="lot-face lot-back"><div style="grid-column:1/-1;font-size:13px;color:var(--muted);">前門車流大，多為短停 · 改後門/南側門較順</div></div></div></div>
           <div class="lot"><div class="lot-inner"><div class="lot-face lot-front"><div class="lamp green"></div><div class="lot-title">長榮路二段·路邊格</div><div class="chip">剩餘 12</div></div><div class="lot-face lot-back"><div style="grid-column:1/-1;font-size:13px;color:var(--muted);">南側門接送相對順暢 · 注意單雙號規定</div></div></div></div>
-          <div class="lot"><div class="lot-inner"><div class="lot-face lot-front"><div class="lamp green"></div><div class="lot-title">懷恩街·路邊格</div><div class="chip">剩餘 8</div></div><div class="lot-face lot-back"><div style="grid-column:1/-1;font-size:13px;color:var(--muted);">可步行到校門 · 尖峰改道用</div></div></div></div>
+          <div class="lot"><div class="lot-inner"><div class="lot-face lot-front"><div class="lamp yellow"></div><div class="lot-title">懷恩街·路邊格</div><div class="chip">剩餘 8</div></div><div class="lot-face lot-back"><div style="grid-column:1/-1;font-size:13px;color:var(--muted);">可步行到校門 · 尖峰改道用</div></div></div></div>
         </div>
       </div>
     </div>
@@ -580,59 +580,115 @@
     }
 
     function renderCards(list){
-      const container = document.getElementById('cards');
-      const emptyEl   = document.getElementById('empty');
-      if (!container || !emptyEl) return; // 保險：找不到就先跳過
+      const container = $('#cards');
+      container.innerHTML = '';
 
-      container.innerHTML='';
-      if (!list.length){ $('#empty').style.display='block'; return; }
-      $('#empty').style.display='none';
-      list.filter(item => item.status !== '已接送').sort((a,b)=>(a.date+a.slotStart).localeCompare(b.date+b.slotStart)).forEach(item=>{
-        const card=document.createElement('div'); card.className='card'; card.dataset.id=item.id;
-        const statusPill = item.status==='已接送'?'done':(item.status==='未接送'?'todo':'wait');
+      // 歷史（過去日期）已由 movePastToHistory() 搬走；這裡是今天與未來
+      const cur = list
+        .sort((a,b)=>(a.date + a.slotStart).localeCompare(b.date + b.slotStart));
+
+      if (!cur.length){
+        $('#empty').style.display = 'block';
+        return;
+      }
+      $('#empty').style.display = 'none';
+
+      cur.forEach(item=>{
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.id = item.id;
+
+        const pillClass =
+          item.status === '已接送' ? 'done' :
+          item.status === '未接送' ? 'todo' : 'wait';
+
+        // 按鈕：只有「待接送」才顯示
+        const actionsHTML = (item.status === '待接送') ? `
+          <div class="btns">
+            <button type="button" class="btn small" data-action="edit"
+              style="background:#e0f2fe;border:1px solid #bae6fd;color:#075985;">修改</button>
+            <button type="button" class="btn small warn" data-action="delete">取消</button>
+            <button type="button" class="btn small" data-action="remind"
+              style="background:linear-gradient(135deg,#e6f0ff,#e8f9ef);border:1px solid transparent;color:var(--text);">
+              提醒
+            </button>
+          </div>
+        ` : '';
+
         card.innerHTML = `
           <h4>${gateByKey(item.gateKey).label} · ${item.slotLabel}</h4>
           <div class="meta">日期：${item.date}</div>
-          ${item.note?`<div class="meta">備註：${item.note}</div>`:''}
-          <div class="meta">狀態：<span class="pill ${statusPill}">${item.status}</span></div>
-          <div class="btns">
-            <button type="button" class="btn small warn" data-action="delete">取消</button>
-            <button type="button" class="btn small" data-action="edit" style="background:#e0f2fe;border:1px solid #bae6fd;color:#075985;">修改</button>
-            <button type="button" class="btn small" data-action="remind" style="background:linear-gradient(135deg,#e6f0ff,#e8f9ef);border:1px solid transparent;color:var(--text);">提醒</button>
-          </div>`;
+          ${item.note ? `<div class="meta">備註：${item.note}</div>` : ''}
+          <div class="meta">目前狀態：<span class="pill ${pillClass}">${item.status}</span></div>
+          ${actionsHTML}
+        `;
+
         container.appendChild(card);
       });
     }
 
-    function renderToday(list){
-      const ymd=todayYMD(); const wrap=$('#todayList'); wrap.innerHTML='';
-      const todayItems=list.filter(x=>x.date===ymd && x.status!=='已接送');
-      if (!todayItems.length){ $('#todayEmpty').style.display='block'; clearHighlight(); return; }
-      $('#todayEmpty').style.display='none';
 
-      todayItems.sort((a,b)=>a.slotStart.localeCompare(b.slotStart)).forEach(item=>{
-        const div=document.createElement('div'); div.className='status-item'; div.dataset.id=item.id;
-        const pillClass = item.status==='未接送'?'todo':'wait';
-        let nextBlock = '';
-        if (item.status==='未接送' && item.ack){
-          const na=nextAvailableAfter(item.date,item.slotEnd);
-          nextBlock=`<div class="next-time">最快可再次預約：${na.ymd} ${na.label}</div>`;
-        }
-        div.innerHTML = `
-          <div class="status-head">
-            <div><strong>${gateByKey(item.gateKey).label}</strong> · <span>${item.slotLabel}</span></div>
-            <div><span class="pill ${pillClass}">${item.status==='未接送'?'未接送':'待接送'}</span></div>
-          </div>
-          ${item.note?`<div class="meta">${item.note}</div>`:''}
-          ${nextBlock}
-          <div class="status-actions">
-            <button type="button" class="btn small" data-action="markDone">已接送</button>
-            <button type="button" class="btn small warn" data-action="markTodo">未接送</button>
-            <button type="button" class="btn small" data-action="delete">刪除</button>
-          </div>`;
-        wrap.appendChild(div);
-      });
+
+  function renderToday(list){
+      const ymd = todayYMD();
+      const wrap = $('#todayList');
+      wrap.innerHTML = '';
+
+      // 今日全部（包含已接送/未接送/待接送）
+      const todayItems = list.filter(x => x.date === ymd);
+
+      if (!todayItems.length){
+        $('#todayEmpty').style.display = 'block';
+        clearHighlight();
+        return;
+      }
+      $('#todayEmpty').style.display = 'none';
+
+      todayItems
+        .sort((a,b)=> a.slotStart.localeCompare(b.slotStart))
+        .forEach(item=>{
+          const div = document.createElement('div');
+          div.className = 'status-item';
+          div.dataset.id = item.id;
+
+          const pillClass =
+            item.status === '已接送' ? 'done' :
+            item.status === '未接送' ? 'todo' : 'wait';
+
+          let infoBlock = '';
+          let actionBlock = '';
+
+          if (item.status === '未接送'){
+            const na = nextAvailableAfter(item.date, item.slotEnd);
+            infoBlock = `<div class="next-time">最快可再次預約：${na.ymd} ${na.label}</div>`;
+            // 不顯示任何按鈕
+          } else if (item.status === '已接送'){
+            infoBlock = `<div class="meta">感謝您於時間內完成接送！</div>`;
+            // 不顯示任何按鈕
+          } else {
+            // 待接送：保留操作按鈕
+            actionBlock = `
+              <div class="status-actions">
+                <button type="button" class="btn small" data-action="markDone">已接送</button>
+                <button type="button" class="btn small warn" data-action="markTodo">未接送</button>
+                <button type="button" class="btn small" data-action="delete">刪除</button>
+              </div>`;
+          }
+
+          div.innerHTML = `
+            <div class="status-head">
+              <div><strong>${gateByKey(item.gateKey).label}</strong> · <span>${item.slotLabel}</span></div>
+              <div><span class="pill ${pillClass}">${item.status}</span></div>
+            </div>
+            ${item.note ? `<div class="meta">${item.note}</div>` : ''}
+            ${infoBlock}
+            ${actionBlock}
+          `;
+          wrap.appendChild(div);
+        });
     }
+
+
 
     // --------- 狀態操作 ----------
     function addBooking({date, slotLabel, gateKey, note}){
@@ -649,52 +705,29 @@
     }
     function remindBooking(id){ const it=load().find(x=>x.id===id); if(!it) return; showToast(`已設定提醒：${it.date} ${it.slotLabel} · ${gateByKey(it.gateKey).label}`); }
 
-   function setStatus(id, status){
-    const list = load();
-    const idx = list.findIndex(x=>x.id===id);
-    if (idx === -1) return;
+    function setStatus(id, status){
+      const list = load();
+      const idx = list.findIndex(x=>x.id===id);
+      if (idx === -1) return;
 
-    const it = { ...list[idx] };
-    it.status = status;
+      const it = { ...list[idx] };
+      it.status = status;
 
-    // 狀態改為「未接送」：留在現在的清單並高亮地圖
-    if (status === '未接送'){
-      it.ack = true;
-      highlightGate(it.gateKey);
+      // 畫面高亮邏輯
+      if (status === '未接送'){
+        it.ack = true;
+        highlightGate(it.gateKey);
+      } else if (status === '已接送'){
+        it.ack = false;
+        clearHighlight();
+      }
+
       list[idx] = it;
       save(list);
-      render();
+      render(); // 重新繪製（卡片保留，但按鈕會隱藏）
       showToast('已更新狀態');
-      return;
     }
 
-    // 狀態改為「已接送」：立即移到歷史紀錄並自目前清單移除
-    if (status === '已接送'){
-      it.ack = false;
-      clearHighlight();
-
-      // 從現有清單刪除
-      const remain = list.filter(x=>x.id !== id);
-      save(remain);
-
-      // 追加至歷史
-      const hist = loadHistory();
-      hist.push(it);
-      // 排序（新到舊）
-      hist.sort((a,b)=>(b.date + (b.slotStart||'')).localeCompare(a.date + (a.slotStart||'')));
-      saveHistory(hist);
-
-      render();
-      showToast('已移至歷史紀錄');
-      return;
-    }
-
-    // 其他狀態（如果未來有）
-    list[idx] = it;
-    save(list);
-    render();
-    showToast('已更新狀態');
-  }
 
 
     // 「我的預約」卡片
@@ -860,7 +893,7 @@
       return dt < t0;
     }
 
-    // 將「過去的預約」或「已接送」移到歷史
+    // 將「過去日期」移到歷史；今天與未來都不動
     function movePastToHistory(){
       const nowList = load();
       if (!Array.isArray(nowList) || !nowList.length) return;
@@ -868,15 +901,22 @@
       const remain = [];
       const archived = [];
 
+      const today = new Date();
+      const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
       for (const item of nowList){
-        const shouldArchive = isPastYMD(item.date) || item.status === '已接送';
-        if (shouldArchive){
+        const [y,m,d] = item.date.split('-').map(Number);
+        const dt = new Date(y, m-1, d);
+
+        if (dt < t0){
           const copy = { ...item };
-          // 若是「過去且仍是待接送」→ 規則改成未接送再歸檔
-          if (isPastYMD(copy.date) && copy.status === '待接送') copy.status = '未接送';
+          // 規則：過去的待接送/未接送 -> 以「未接送」歸檔；過去的已接送維持已接送
+          if (copy.status === '待接送' || copy.status === '未接送'){
+            copy.status = '未接送';
+          }
           archived.push(copy);
         } else {
-          remain.push(item);
+          remain.push(item); // 今天與未來都留在目前清單
         }
       }
 
@@ -888,6 +928,7 @@
         saveHistory(merged);
       }
     }
+
 
     // 渲染歷史表格
     function renderHistory(){
