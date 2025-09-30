@@ -196,6 +196,27 @@
       .grid-2 { grid-template-columns: 1fr; }
     }
 
+    /* 歷史紀錄下拉樣式 */
+    .history-panel{
+      margin:10px 0 16px;
+      background:#ffffff;
+      border:1px solid var(--border);
+      border-radius:12px;
+      box-shadow:var(--shadow);
+      padding:10px;
+    }
+    .history-table-wrap{ overflow:auto; max-height:340px; }
+    .history-table{
+      width:100%; border-collapse:collapse; font-size:14px; color:var(--text);
+    }
+    .history-table th, .history-table td{
+      padding:10px 12px; border-bottom:1px solid var(--border); white-space:nowrap;
+    }
+    .history-table thead th{ position:sticky; top:0; background:#f8fafc; z-index:1; text-align:left; }
+    @media (max-width: 520px){
+      .history-table th, .history-table td{ white-space:normal; }
+    }
+
 
   </style>
 </head>
@@ -291,10 +312,10 @@
           </div>
           <div class="field"><label for="gate">接送地點</label>
             <select id="gate">
-              <option value="A">圓環 A</option>
-              <option value="B">圓環 B</option>
-              <option value="C">圓環 C</option>
-              <option value="D">圓環 D</option>
+              <option value="A">圓環 A區</option>
+              <option value="B">圓環 B區</option>
+              <option value="C">圓環 C區</option>
+              <option value="D">圓環 D區</option>
               <option value="E">懷恩街</option>
               <option value="F">長榮路二段</option>
             </select>
@@ -380,7 +401,7 @@
   <section id="traffic">
     <div class="wrap">
       <h2 class="h2">🚦 車流預測與最佳路線</h2>
-      <p class="sub">尖峰時段建議優先走懷恩街（E），備選圓環 A–D 依來向就近半圈離場。</p>
+      <p class="sub">尖峰時段建議優先走懷恩街，備選圓環依來向就近半圈離場。</p>
       <div class="panel grid-2">
         <div class="chart-card chart">
           <svg viewBox="0 0 600 260" xmlns="http://www.w3.org/2000/svg" aria-label="車流量預測">
@@ -441,10 +462,33 @@
   <!-- 我的預約 -->
   <section id="bookings">
     <div class="wrap">
-      <h2 class="h2">📒 我的預約</h2>
+      <h2 class="h2">
+        📒 我的預約
+        <button type="button" class="btn small" id="historyToggle" aria-expanded="false" aria-controls="historyPanel" style="margin-left:8px">
+          歷史紀錄 ▾
+        </button>
+      </h2>
+
       <div class="panel">
         <div id="cards" class="cards"></div>
-        <div id="empty" class="empty" style="display:none;padding:10px 2px;">目前沒有任何預約，快去新增吧！</div>
+        <div id="empty" style="display:none;padding:10px 2px;color:var(--muted)">目前尚無預約</div>
+      </div>
+
+      <!-- 歷史紀錄下拉面板 -->
+      <div id="historyPanel" class="history-panel" hidden>
+        <div class="history-table-wrap">
+          <table class="history-table" aria-label="歷史紀錄表格">
+            <thead>
+              <tr>
+                <th>日期</th>
+                <th>地點</th>
+                <th>時段</th>
+                <th>狀態</th>
+              </tr>
+            </thead>
+            <tbody id="historyTbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
   </section>
@@ -475,10 +519,10 @@
       {label:'16:45 - 17:15', start:'16:45', end:'17:15'}
     ];
     const GATES = [
-      {key:'A', label:'圓環 A', markerId:'ring-A'},
-      {key:'B', label:'圓環 B', markerId:'ring-B'},
-      {key:'C', label:'圓環 C', markerId:'ring-C'},
-      {key:'D', label:'圓環 D', markerId:'ring-D'},
+      {key:'A', label:'圓環 A區', markerId:'ring-A'},
+      {key:'B', label:'圓環 B區', markerId:'ring-B'},
+      {key:'C', label:'圓環 C區', markerId:'ring-C'},
+      {key:'D', label:'圓環 D區', markerId:'ring-D'},
       {key:'E', label:'懷恩街', markerId:'huai-en'},
       {key:'F', label:'長榮路二段', markerId:'evergreen'}
     ];
@@ -536,7 +580,11 @@
     }
 
     function renderCards(list){
-      const container = $('#cards'); container.innerHTML='';
+      const container = document.getElementById('cards');
+      const emptyEl   = document.getElementById('empty');
+      if (!container || !emptyEl) return; // 保險：找不到就先跳過
+
+      container.innerHTML='';
       if (!list.length){ $('#empty').style.display='block'; return; }
       $('#empty').style.display='none';
       list.sort((a,b)=>(a.date+a.slotStart).localeCompare(b.date+b.slotStart)).forEach(item=>{
@@ -601,27 +649,70 @@
     }
     function remindBooking(id){ const it=load().find(x=>x.id===id); if(!it) return; showToast(`已設定提醒：${it.date} ${it.slotLabel} · ${gateByKey(it.gateKey).label}`); }
 
-    function setStatus(id, status){
-      const list=load(); const it=list.find(x=>x.id===id); if(!it) return;
-      it.status=status;
-      if (status==='未接送'){ it.ack=true; highlightGate(it.gateKey); }
-      if (status==='已接送'){ it.ack=false; clearHighlight(); }
-      save(list); render();
+   function setStatus(id, status){
+    const list = load();
+    const idx = list.findIndex(x=>x.id===id);
+    if (idx === -1) return;
+
+    const it = { ...list[idx] };
+    it.status = status;
+
+    // 狀態改為「未接送」：留在現在的清單並高亮地圖
+    if (status === '未接送'){
+      it.ack = true;
+      highlightGate(it.gateKey);
+      list[idx] = it;
+      save(list);
+      render();
       showToast('已更新狀態');
+      return;
     }
 
+    // 狀態改為「已接送」：立即移到歷史紀錄並自目前清單移除
+    if (status === '已接送'){
+      it.ack = false;
+      clearHighlight();
+
+      // 從現有清單刪除
+      const remain = list.filter(x=>x.id !== id);
+      save(remain);
+
+      // 追加至歷史
+      const hist = loadHistory();
+      hist.push(it);
+      // 排序（新到舊）
+      hist.sort((a,b)=>(b.date + (b.slotStart||'')).localeCompare(a.date + (a.slotStart||'')));
+      saveHistory(hist);
+
+      render();
+      showToast('已移至歷史紀錄');
+      return;
+    }
+
+    // 其他狀態（如果未來有）
+    list[idx] = it;
+    save(list);
+    render();
+    showToast('已更新狀態');
+  }
+
+
     // 「我的預約」卡片
-    $('#cards').addEventListener('click', (e)=>{
-      const btn = e.target.closest('button[data-action]');
-      if (!btn) return;
-      e.preventDefault(); e.stopPropagation();
-      const id = btn.closest('.card')?.dataset.id;
-      const act = btn.dataset.action;
-      if (!id) return;
-      if (act==='delete') deleteBooking(id);
-      if (act==='edit')   editBooking(id);
-      if (act==='remind') remindBooking(id);
-    });
+    const cardsRoot = document.getElementById('cards');
+    if (cardsRoot) {
+      cardsRoot.addEventListener('click', (e)=>{
+        const btn = e.target.closest('button[data-action]');
+        if (!btn) return;
+        e.preventDefault(); e.stopPropagation();
+        const id = btn.closest('.card')?.dataset.id;
+        const act = btn.dataset.action;
+        if (!id) return;
+        if (act==='delete') deleteBooking(id);
+        if (act==='edit')   editBooking(id);
+        if (act==='remind') remindBooking(id);
+      });
+    }
+
 
     // 「今日狀態」卡片（已接送 / 未接送）
     $('#todayList').addEventListener('click', (e)=>{
@@ -644,7 +735,11 @@
       const gateKey=$('#gate').value;
       const note=$('#note').value.trim();
       addBooking({date, slotLabel, gateKey, note});
+
+      // ★ 預約完成後跳轉到「我的預約」區塊
+      location.hash = '#bookings';
     });
+
 
     // 初始化
     (function init(){
@@ -682,6 +777,177 @@
       document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') setOpen(false); });
       window.addEventListener('scroll', ()=> setOpen(false), {passive:true});
     })();
+
+    // --- 日期只允許「今日之後的平日」 ---
+    (function enforceWeekdayOnly(){
+      const dateInput = document.getElementById('date');
+      if(!dateInput) return;
+
+      // 工具
+      const toYMD = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const isWeekend = (d) => {
+        const day = d.getDay(); // 0=日,6=六
+        return day === 0 || day === 6;
+      };
+      const nextWeekday = (d) => {
+        const nd = new Date(d);
+        while (isWeekend(nd)) nd.setDate(nd.getDate()+1);
+        return nd;
+      };
+
+      // 設定最小可選：若今天是週末，就設到下個週一；否則就是今天
+      const today = new Date();
+      const minDate = nextWeekday(today);         // 今天或下一個工作日
+      const minYMD  = toYMD(minDate);
+      dateInput.min = minYMD;
+      dateInput.setAttribute('title', '僅可預約今日後的平日');
+
+      // 若目前沒有值，或值比最小值早、或是週末，直接校正
+      const ensureValid = (ymdStr) => {
+        if(!ymdStr) return minYMD;
+        const [y,m,d] = ymdStr.split('-').map(Number);
+        let dt = new Date(y, m-1, d);
+        if (dt < minDate) dt = minDate;
+        if (isWeekend(dt)) dt = nextWeekday(dt);
+        return toYMD(dt);
+      };
+
+      // 初始化修正一次
+      dateInput.value = ensureValid(dateInput.value);
+
+      // 使用者更改時即時修正
+      dateInput.addEventListener('change', () => {
+        const fixed = ensureValid(dateInput.value);
+        if (fixed !== dateInput.value) {
+          dateInput.value = fixed;
+          if (typeof showToast === 'function') {
+            showToast(`日期僅限平日，已調整為 ${fixed}`);
+          }
+        }
+      });
+
+      // 安全起見：按「我要預約」前再檢查一次
+      const reserveBtn = document.getElementById('reserveBtn');
+      if (reserveBtn) {
+        reserveBtn.addEventListener('click', () => {
+          const fixed = ensureValid(dateInput.value);
+          if (fixed !== dateInput.value) {
+            dateInput.value = fixed;
+            if (typeof showToast === 'function') {
+              showToast(`日期僅限平日，已調整為 ${fixed}`);
+            }
+          }
+        }, {capture: true}); // 先於既有 click 邏輯執行
+      }
+    })();
+
+    // === 歷史紀錄：過去日期自動歸檔＆下拉表格 ===
+    const KEY_HISTORY = 'safecloud_history';
+
+    function loadHistory(){
+      try{ return JSON.parse(localStorage.getItem(KEY_HISTORY)) || []; }
+      catch(e){ return []; }
+    }
+    function saveHistory(list){
+      localStorage.setItem(KEY_HISTORY, JSON.stringify(list));
+    }
+
+    // 過去日期判定（以當地日期 00:00 為界）
+    function isPastYMD(ymd){
+      const today = new Date(); const t0 = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const [y,m,d] = ymd.split('-').map(Number);
+      const dt = new Date(y, m-1, d);
+      return dt < t0;
+    }
+
+    // 將「過去的預約」或「已接送」移到歷史
+    function movePastToHistory(){
+      const nowList = load();
+      if (!Array.isArray(nowList) || !nowList.length) return;
+
+      const remain = [];
+      const archived = [];
+
+      for (const item of nowList){
+        const shouldArchive = isPastYMD(item.date) || item.status === '已接送';
+        if (shouldArchive){
+          const copy = { ...item };
+          // 若是「過去且仍是待接送」→ 規則改成未接送再歸檔
+          if (isPastYMD(copy.date) && copy.status === '待接送') copy.status = '未接送';
+          archived.push(copy);
+        } else {
+          remain.push(item);
+        }
+      }
+
+      if (archived.length){
+        save(remain);
+        const hist = loadHistory();
+        const merged = hist.concat(archived);
+        merged.sort((a,b)=>(b.date + (b.slotStart||'')).localeCompare(a.date + (a.slotStart||'')));
+        saveHistory(merged);
+      }
+    }
+
+    // 渲染歷史表格
+    function renderHistory(){
+      const tbody = document.getElementById('historyTbody');
+      if (!tbody) return;
+      const hist = loadHistory();
+
+      if (!hist.length){
+        tbody.innerHTML = `<tr><td colspan="4" style="color:var(--muted)">目前沒有歷史紀錄</td></tr>`;
+        return;
+      }
+
+      const rows = hist.map(it => `
+        <tr>
+          <td>${it.date}</td>
+          <td>${gateByKey(it.gateKey)?.label || it.gateKey}</td>
+          <td>${it.slotLabel || (it.slotStart && it.slotEnd ? `${it.slotStart} - ${it.slotEnd}` : '')}</td>
+          <td>${it.status}</td>
+        </tr>
+      `).join('');
+      tbody.innerHTML = rows;
+    }
+
+    // 歷史面板開合
+    (function historyDropdownInit(){
+      const toggle = document.getElementById('historyToggle');
+      const panel = document.getElementById('historyPanel');
+      if (!toggle || !panel) return;
+
+      function setOpen(open){
+        panel.hidden = !open;
+        toggle.setAttribute('aria-expanded', String(open));
+        if (open) renderHistory();
+      }
+      toggle.addEventListener('click', (e)=>{
+        e.preventDefault();
+        const open = panel.hidden;
+        setOpen(open);
+      });
+
+      // 捲動或點外面時自動收合（小體貼）
+      document.addEventListener('click', (e)=>{
+        if (!panel.hidden && !panel.contains(e.target) && !toggle.contains(e.target)){
+          setOpen(false);
+        }
+      });
+      window.addEventListener('scroll', ()=>{ if(!panel.hidden) setOpen(false); }, {passive:true});
+    })();
+
+    // 把歸檔掛到初始化與每次渲染前
+    (function patchRenderWithArchive(){
+      const _render = render;
+      window.render = function(){
+        movePastToHistory();  // ← 先歸檔
+        _render();            // 再照原流程渲染「我的預約 / 今日狀態」
+      };
+    })();
+
+    // 首次載入就先跑一次歸檔（避免第一次進站沒觸發 render 前有舊資料）
+    movePastToHistory();
 
 
   </script>
