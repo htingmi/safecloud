@@ -587,7 +587,7 @@
       container.innerHTML='';
       if (!list.length){ $('#empty').style.display='block'; return; }
       $('#empty').style.display='none';
-      list.sort((a,b)=>(a.date+a.slotStart).localeCompare(b.date+b.slotStart)).forEach(item=>{
+      list.filter(item => item.status !== '已接送').sort((a,b)=>(a.date+a.slotStart).localeCompare(b.date+b.slotStart)).forEach(item=>{
         const card=document.createElement('div'); card.className='card'; card.dataset.id=item.id;
         const statusPill = item.status==='已接送'?'done':(item.status==='未接送'?'todo':'wait');
         card.innerHTML = `
