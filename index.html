@@ -469,11 +469,6 @@
         </button>
       </h2>
 
-      <div class="panel">
-        <div id="cards" class="cards"></div>
-        <div id="empty" style="display:none;padding:10px 2px;color:var(--muted)">目前尚無預約</div>
-      </div>
-
       <!-- 歷史紀錄下拉面板 -->
       <div id="historyPanel" class="history-panel" hidden>
         <div class="history-table-wrap">
@@ -490,6 +485,12 @@
           </table>
         </div>
       </div>
+
+      <div class="panel">
+        <div id="cards" class="cards"></div>
+        <div id="empty" style="display:none;padding:10px 2px;color:var(--muted)">目前尚無預約</div>
+      </div>
+
     </div>
   </section>
 
@@ -989,7 +990,6 @@
 
     // 首次載入就先跑一次歸檔（避免第一次進站沒觸發 render 前有舊資料）
     movePastToHistory();
-
 
   </script>
 </body>
