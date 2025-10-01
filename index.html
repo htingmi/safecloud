@@ -979,20 +979,14 @@
       window.addEventListener('scroll', ()=>{ if(!panel.hidden) setOpen(false); }, {passive:true});
     })();
 
-    // 把歸檔掛到初始化與每次渲染前
-    (function patchRenderWithArchive(){
-      const _render = render;
-      window.render = function(){
-        movePastToHistory();  // ← 先歸檔
-        _render();            // 再照原流程渲染「我的預約 / 今日狀態」
-      };
-    })();
-
     // 首次載入就先跑一次歸檔（避免第一次進站沒觸發 render 前有舊資料）
-    movePastToHistory();
-    render();
-
+    (function bootstrap(){
+      movePastToHistory();  // 先把昨天以前的都搬走
+      render();             // 再畫畫面
+    })();
+    
   </script>
 </body>
 </html>
+
 
