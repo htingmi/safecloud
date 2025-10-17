@@ -300,14 +300,14 @@
           <div class="field"><label for="date">放學日期</label><input id="date" type="date" /></div>
           <div class="field"><label for="slot">接送時段</label>
             <select id="slot">
-              <option>07:00 - 07:15</option>
-              <option>07:15 - 07:30</option>
-              <option>07:45 - 08:00</option>
-              <option>08:00 - 08:15</option>
-              <option>16:15 - 16:30</option>
-              <option>16:30 - 16:45</option>
-              <option>16:45 - 17:00</option>
-              <option>16:45 - 17:15</option>
+              <option>07:30 - 07:40</option>
+              <option>07:40 - 07:50</option>
+              <option>07:50 - 08:00</option>
+              <option>08:00 - 08:10</option>
+              <option>16:05 - 16:15</option>
+              <option>16:15 - 16:25</option>
+              <option>16:25 - 16:35</option>
+              <option>16:35 - 16:45</option>
             </select>
           </div>
           <div class="field"><label for="gate">接送地點</label>
@@ -510,14 +510,14 @@
     const KEY = 'safecloud_bookings';
     // 與下拉一致的全時段（用於「最快可再次預約」計算）
     const SLOTS = [
-      {label:'07:00 - 07:15', start:'07:00', end:'07:15'},
-      {label:'07:15 - 07:30', start:'07:15', end:'07:30'},
-      {label:'07:45 - 08:00', start:'07:45', end:'08:00'},
-      {label:'08:00 - 08:15', start:'08:00', end:'08:15'},
-      {label:'16:15 - 16:30', start:'16:15', end:'16:30'},
-      {label:'16:30 - 16:45', start:'16:30', end:'16:45'},
-      {label:'16:45 - 17:00', start:'16:45', end:'17:00'},
-      {label:'16:45 - 17:15', start:'16:45', end:'17:15'}
+      {label:'07:30 - 07:40', start:'07:30', end:'07:40'},
+      {label:'07:40 - 07:50', start:'07:40', end:'07:50'},
+      {label:'07:50 - 08:00', start:'07:50', end:'08:00'},
+      {label:'08:00 - 08:10', start:'08:00', end:'08:10'},
+      {label:'16:05 - 16:15', start:'16:05', end:'16:15'},
+      {label:'16:15 - 16:25', start:'16:15', end:'16:25'},
+      {label:'16:25 - 16:35', start:'16:25', end:'16:35'},
+      {label:'16:35 - 16:45', start:'16:35', end:'16:45'}
     ];
     const GATES = [
       {key:'A', label:'圓環 A區', markerId:'ring-A'},
@@ -988,5 +988,4 @@
   </script>
 </body>
 </html>
-
 
